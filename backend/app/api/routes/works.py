@@ -1,5 +1,9 @@
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import FileResponse
 from sqlalchemy import select
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, selectinload
 
 from app.db import get_session
@@ -7,6 +11,7 @@ from app.models import Tag, Work, WorkType
 from app.schemas import FileRead, PlaybackEventAck, PlaybackEventCreate, SidecarActionResult, TagRead, VideoPlayerMetadataRead, WorkRead
 from app.services.player_metadata import load_video_player_metadata, record_playback_event
 from app.services.sidecar import export_work_sidecar, import_work_sidecar
+from app.services.thumbnails import generate_work_thumbnails, get_current_cover_thumbnail, set_work_cover
 
 router = APIRouter(prefix='/works', tags=['works'])
 
@@ -15,9 +20,15 @@ router = APIRouter(prefix='/works', tags=['works'])
 def list_works(
     work_type: WorkType | None = Query(default=None, alias='type'),
     tag: str | None = None,
+    q: str | None = Query(default=None, min_length=1),
     session: Session = Depends(get_session),
 ) -> list[WorkRead]:
-    query = select(Work).options(selectinload(Work.files), selectinload(Work.tags)).order_by(Work.updated_at.desc())
+    query = (
+        select(Work)
+        .options(selectinload(Work.files), selectinload(Work.tags), selectinload(Work.thumbnails))
+        .order_by(Work.updated_at.desc())
+    )
+    query = select(Work).options(selectinload(Work.files), selectinload(Work.tags), selectinload(Work.progress)).order_by(Work.updated_at.desc())
     if work_type is not None:
         query = query.where(Work.type == work_type)
     if tag:
@@ -55,6 +66,47 @@ def create_playback_event(work_id: int, payload: PlaybackEventCreate, session: S
         duration_seconds=payload.duration_seconds,
     )
     return PlaybackEventAck(work_id=work_id, accepted=True)
+
+
+@router.get('/{work_id}/cover')
+def get_cover_content(work_id: int, session: Session = Depends(get_session)) -> FileResponse:
+    work = session.scalar(select(Work).options(selectinload(Work.files)).where(Work.id == work_id))
+    if work is None:
+        raise HTTPException(status_code=404, detail='Work not found')
+
+    cover_path = work.cover_path or (work.files[0].path if work.files else None)
+    if not cover_path:
+        raise HTTPException(status_code=404, detail='Cover not found')
+
+    path = Path(cover_path)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail='Cover file not found')
+    return FileResponse(path)
+
+
+@router.get('/{work_id}/thumbnails/{thumbnail_id}')
+def get_thumbnail_content(work_id: int, thumbnail_id: int, session: Session = Depends(get_session)) -> FileResponse:
+    thumbnail = session.scalar(select(Thumbnail).where(Thumbnail.id == thumbnail_id, Thumbnail.work_id == work_id))
+    if thumbnail is None:
+        raise HTTPException(status_code=404, detail='Thumbnail not found')
+
+    path = Path(thumbnail.image_path)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail='Thumbnail file not found')
+    return FileResponse(path)
+
+
+@router.get('/{work_id}/files/{file_id}/content')
+def get_work_file_content(work_id: int, file_id: int, session: Session = Depends(get_session)) -> FileResponse:
+    media_file = session.scalar(select(MediaFile).where(MediaFile.id == file_id, MediaFile.work_id == work_id))
+    if media_file is None:
+        raise HTTPException(status_code=404, detail='File not found')
+
+    file_path = Path(media_file.path)
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=404, detail='File content missing')
+
+    return FileResponse(file_path)
 
 
 @router.post('/{work_id}/export-sidecar', response_model=SidecarActionResult)
@@ -95,6 +147,7 @@ def _serialize_work(session: Session, work: Work) -> WorkRead:
         type=work.type,
         summary=work.summary,
         cover_path=work.cover_path,
+        cover_url=f'/api/works/{work.id}/cover' if work.cover_path or work.files else None,
         created_at=work.created_at,
         updated_at=work.updated_at,
         tags=[TagRead.model_validate(tag, from_attributes=True) for tag in work.tags],

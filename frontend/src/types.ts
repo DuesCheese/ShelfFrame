@@ -8,6 +8,17 @@ export interface MediaFile {
   kind: string
   size_bytes: number | null
   order_index: number
+  content_url?: string | null
+}
+
+export interface Thumbnail {
+  id: number
+  type: ThumbnailType
+  source_path?: string | null
+  image_path: string
+  ts_sec?: number | null
+  sort_no: number
+  thumbnail_url: string
 }
 
 export interface Tag {
@@ -56,6 +67,7 @@ export interface Work {
   type: WorkType
   summary?: string | null
   cover_path?: string | null
+  cover_url?: string | null
   created_at: string
   updated_at: string
   tags: Tag[]

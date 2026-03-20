@@ -14,6 +14,17 @@ class WorkType(str, Enum):
     VIDEO = "video"
 
 
+class ThumbnailType(str, Enum):
+    COVER = "cover"
+    KEYFRAME = "keyframe"
+
+
+class ActivityEventType(str, Enum):
+    DETAIL_OPEN = "detail_open"
+    READER_OPEN = "reader_open"
+    PLAYER_OPEN = "player_open"
+
+
 work_tags = Table(
     "work_tags",
     Base.metadata,
