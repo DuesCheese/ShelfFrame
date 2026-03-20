@@ -5,7 +5,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
-from app.models import WorkType
+from app.models import ScanLogLevel, ScanTaskStatus, WorkType
 
 
 class FileRead(BaseModel):
@@ -57,12 +57,36 @@ class ScanRequest(BaseModel):
     root: Path | None = None
 
 
-class ScanResult(BaseModel):
+class ScanLogRead(BaseModel):
+    id: int
+    level: ScanLogLevel
+    code: str | None = None
+    path: str | None = None
+    message: str
+    created_at: datetime
+
+
+class ScanTaskRead(BaseModel):
+    id: int
+    root_path: str
+    status: ScanTaskStatus
+    started_at: datetime
+    finished_at: datetime | None = None
+    error_message: str | None = None
+    discovered: int
+    created: int
+    updated: int
+    skipped: int
+    logs: list[ScanLogRead] = Field(default_factory=list)
+
+
+class ScanRunResult(BaseModel):
     discovered: int
     created: int
     updated: int
     skipped: int
     roots: list[str] = Field(default_factory=list)
+    tasks: list[ScanTaskRead] = Field(default_factory=list)
 
 
 class SettingRead(BaseModel):

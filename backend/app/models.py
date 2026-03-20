@@ -14,6 +14,19 @@ class WorkType(str, Enum):
     VIDEO = "video"
 
 
+class ScanTaskStatus(str, Enum):
+    RUNNING = 'running'
+    SUCCEEDED = 'succeeded'
+    COMPLETED_WITH_ERRORS = 'completed_with_errors'
+    FAILED = 'failed'
+
+
+class ScanLogLevel(str, Enum):
+    INFO = 'info'
+    WARNING = 'warning'
+    ERROR = 'error'
+
+
 work_tags = Table(
     "work_tags",
     Base.metadata,
@@ -74,3 +87,38 @@ class Tag(Base):
     group_name: Mapped[str | None] = mapped_column(String(64), default=None)
 
     works: Mapped[list[Work]] = relationship(secondary=work_tags, back_populates="tags")
+
+
+class ScanTask(Base):
+    __tablename__ = 'scan_tasks'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    root_path: Mapped[str] = mapped_column(String(1024), index=True)
+    status: Mapped[ScanTaskStatus] = mapped_column(SqlEnum(ScanTaskStatus), index=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, default=None)
+    error_message: Mapped[str | None] = mapped_column(Text, default=None)
+    discovered: Mapped[int] = mapped_column(Integer, default=0)
+    created: Mapped[int] = mapped_column(Integer, default=0)
+    updated: Mapped[int] = mapped_column(Integer, default=0)
+    skipped: Mapped[int] = mapped_column(Integer, default=0)
+
+    logs: Mapped[list[ScanLog]] = relationship(
+        back_populates='task',
+        cascade='all, delete-orphan',
+        order_by='ScanLog.created_at.asc()',
+    )
+
+
+class ScanLog(Base):
+    __tablename__ = 'scan_logs'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    task_id: Mapped[int] = mapped_column(ForeignKey('scan_tasks.id'), index=True)
+    level: Mapped[ScanLogLevel] = mapped_column(SqlEnum(ScanLogLevel), index=True)
+    code: Mapped[str | None] = mapped_column(String(64), default=None, index=True)
+    path: Mapped[str | None] = mapped_column(String(1024), default=None)
+    message: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+
+    task: Mapped[ScanTask] = relationship(back_populates='logs')

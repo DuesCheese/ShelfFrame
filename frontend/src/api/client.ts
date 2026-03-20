@@ -1,12 +1,28 @@
-import type { MediaRoot, ScanResult, Settings, Tag, Work } from '../types'
+import type { MediaRoot, ScanRunResult, Settings, Tag, Work } from '../types'
 
 const jsonHeaders = {
   'Content-Type': 'application/json',
 }
 
+async function readErrorMessage(response: Response, fallback: string): Promise<string> {
+  try {
+    const payload = (await response.json()) as { detail?: string }
+    if (typeof payload.detail === 'string' && payload.detail.trim()) {
+      return payload.detail
+    }
+  } catch {
+    // ignore response parsing errors and fall back to the generic message
+  }
+
+  if (response.statusText) {
+    return `${fallback} (${response.status} ${response.statusText})`
+  }
+  return fallback
+}
+
 async function parseResponse<T>(response: Response, message: string): Promise<T> {
   if (!response.ok) {
-    throw new Error(message)
+    throw new Error(await readErrorMessage(response, message))
   }
   return response.json() as Promise<T>
 }
@@ -25,13 +41,13 @@ export async function fetchWork(id: string | number): Promise<Work> {
   return parseResponse<Work>(response, 'Failed to load work details')
 }
 
-export async function triggerScan(): Promise<ScanResult> {
+export async function triggerScan(): Promise<ScanRunResult> {
   const response = await fetch('/api/scan', {
     method: 'POST',
     headers: jsonHeaders,
     body: JSON.stringify({}),
   })
-  return parseResponse<ScanResult>(response, 'Failed to trigger scan')
+  return parseResponse<ScanRunResult>(response, 'Failed to trigger scan')
 }
 
 export async function fetchSettings(): Promise<Settings> {
@@ -51,7 +67,7 @@ export async function createMediaRoot(path: string): Promise<MediaRoot> {
 export async function deleteMediaRoot(id: number): Promise<void> {
   const response = await fetch(`/api/settings/media-roots/${id}`, { method: 'DELETE' })
   if (!response.ok) {
-    throw new Error('Failed to delete media root')
+    throw new Error(await readErrorMessage(response, 'Failed to delete media root'))
   }
 }
 
@@ -72,7 +88,7 @@ export async function createTag(input: { name: string; color?: string; group_nam
 export async function deleteTag(id: number): Promise<void> {
   const response = await fetch(`/api/tags/${id}`, { method: 'DELETE' })
   if (!response.ok) {
-    throw new Error('Failed to delete tag')
+    throw new Error(await readErrorMessage(response, 'Failed to delete tag'))
   }
 }
 

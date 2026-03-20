@@ -8,6 +8,11 @@
       </div>
     </header>
 
+    <div v-if="errorMessage" class="notice notice--error">
+      <strong>操作失败：</strong>{{ errorMessage }}
+    </div>
+    <p v-if="successMessage" class="notice notice--success">{{ successMessage }}</p>
+
     <div class="settings-grid">
       <section class="panel">
         <h3>媒体目录</h3>
@@ -53,6 +58,13 @@ const mediaRootInput = ref('')
 const tagName = ref('')
 const tagColor = ref('')
 const tagGroup = ref('')
+const errorMessage = ref('')
+const successMessage = ref('')
+
+function resetMessages() {
+  errorMessage.value = ''
+  successMessage.value = ''
+}
 
 async function loadSettings() {
   settings.value = await fetchSettings()
@@ -64,31 +76,60 @@ async function loadTags() {
 
 async function submitRoot() {
   if (!mediaRootInput.value.trim()) return
-  await createMediaRoot(mediaRootInput.value)
-  mediaRootInput.value = ''
-  await loadSettings()
+  resetMessages()
+  try {
+    await createMediaRoot(mediaRootInput.value)
+    mediaRootInput.value = ''
+    successMessage.value = '媒体目录已保存'
+    await loadSettings()
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '无法添加媒体目录'
+  }
 }
 
 async function removeRoot(id: number) {
-  await deleteMediaRoot(id)
-  await loadSettings()
+  resetMessages()
+  try {
+    await deleteMediaRoot(id)
+    successMessage.value = '媒体目录已删除'
+    await loadSettings()
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '无法删除媒体目录'
+  }
 }
 
 async function submitTag() {
   if (!tagName.value.trim()) return
-  await createTag({ name: tagName.value, color: tagColor.value || undefined, group_name: tagGroup.value || undefined })
-  tagName.value = ''
-  tagColor.value = ''
-  tagGroup.value = ''
-  await loadTags()
+  resetMessages()
+  try {
+    await createTag({ name: tagName.value, color: tagColor.value || undefined, group_name: tagGroup.value || undefined })
+    tagName.value = ''
+    tagColor.value = ''
+    tagGroup.value = ''
+    successMessage.value = '标签已创建'
+    await loadTags()
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '无法创建标签'
+  }
 }
 
 async function removeTag(id: number) {
-  await deleteTag(id)
-  await loadTags()
+  resetMessages()
+  try {
+    await deleteTag(id)
+    successMessage.value = '标签已删除'
+    await loadTags()
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '无法删除标签'
+  }
 }
 
 onMounted(async () => {
-  await Promise.all([loadSettings(), loadTags()])
+  resetMessages()
+  try {
+    await Promise.all([loadSettings(), loadTags()])
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '无法加载设置页数据'
+  }
 })
 </script>

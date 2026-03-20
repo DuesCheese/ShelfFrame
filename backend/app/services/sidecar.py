@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from json import JSONDecodeError
 from pathlib import Path
 
 from sqlalchemy import select
@@ -11,6 +12,13 @@ from app.models import Tag, Work
 
 SIDE_CAR_FILENAME = 'metadata.json'
 VIDEO_SIDE_CAR_SUFFIX = '.metadata.json'
+
+
+class SidecarParseError(ValueError):
+    def __init__(self, sidecar_path: Path, reason: str):
+        self.sidecar_path = sidecar_path
+        self.reason = reason
+        super().__init__(f'Failed to parse sidecar {sidecar_path}: {reason}')
 
 
 def resolve_sidecar_path(work: Work) -> Path:
@@ -24,7 +32,20 @@ def load_sidecar_for_path(entry: Path) -> dict | None:
     sidecar_path = entry / SIDE_CAR_FILENAME if entry.is_dir() else entry.with_suffix(VIDEO_SIDE_CAR_SUFFIX)
     if not sidecar_path.exists():
         return None
-    return json.loads(sidecar_path.read_text(encoding='utf-8'))
+
+    try:
+        content = sidecar_path.read_text(encoding='utf-8')
+        payload = json.loads(content)
+    except JSONDecodeError as error:
+        raise SidecarParseError(sidecar_path, f'invalid json at line {error.lineno} column {error.colno}') from error
+    except UnicodeDecodeError as error:
+        raise SidecarParseError(sidecar_path, f'invalid utf-8: {error.reason}') from error
+    except OSError as error:
+        raise SidecarParseError(sidecar_path, str(error)) from error
+
+    if not isinstance(payload, dict):
+        raise SidecarParseError(sidecar_path, 'payload must be a JSON object')
+    return payload
 
 
 def export_work_sidecar(session: Session, work_id: int) -> Path:
@@ -65,14 +86,14 @@ def import_work_sidecar(session: Session, work_id: int) -> Path:
     if not sidecar_path.exists():
         raise FileNotFoundError(sidecar_path)
 
-    payload = json.loads(sidecar_path.read_text(encoding='utf-8'))
+    payload = load_sidecar_for_path(Path(work.path)) or {}
     work.title = payload.get('title') or work.title
     work.summary = payload.get('description')
     work.cover_path = payload.get('cover_path') or work.cover_path
 
     tag_names = payload.get('tags') or []
     if tag_names:
-        work.tags = [_get_or_create_tag(session, tag_name) for tag_name in tag_names]
+        work.tags = [_get_or_create_tag(session, tag_name) for tag_name in tag_names if tag_name.strip()]
 
     session.add(work)
     session.commit()

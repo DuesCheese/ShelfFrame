@@ -58,6 +58,7 @@ async function loadSettings() {
   settings.value = await fetchSettings()
 }
 
+
 async function scan() {
   const result = await triggerScan()
   roots.value = result.roots

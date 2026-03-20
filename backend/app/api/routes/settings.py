@@ -4,7 +4,13 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.db import get_session
 from app.schemas import MediaRootCreate, MediaRootRead, SettingRead
-from app.services.media_roots import add_media_root, bootstrap_media_root, delete_media_root, list_media_roots
+from app.services.media_roots import (
+    MediaRootValidationError,
+    add_media_root,
+    bootstrap_media_root,
+    delete_media_root,
+    list_media_roots,
+)
 
 router = APIRouter(prefix='/settings', tags=['settings'])
 
@@ -21,7 +27,10 @@ def get_settings(session: Session = Depends(get_session)) -> SettingRead:
 
 @router.post('/media-roots', response_model=MediaRootRead, status_code=status.HTTP_201_CREATED)
 def create_media_root(payload: MediaRootCreate, session: Session = Depends(get_session)) -> MediaRootRead:
-    media_root = add_media_root(session, payload.path)
+    try:
+        media_root = add_media_root(session, payload.path)
+    except MediaRootValidationError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
     return MediaRootRead(id=media_root.id, path=media_root.path, enabled=media_root.enabled)
 
 
