@@ -20,7 +20,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { fetchWork } from '../api/client'
+import { fetchWork, trackWorkAccess } from '../api/client'
 import type { Work } from '../types'
 
 const route = useRoute()
@@ -28,5 +28,8 @@ const work = ref<Work | null>(null)
 
 onMounted(async () => {
   work.value = await fetchWork(route.params.id as string)
+  if (work.value) {
+    await trackWorkAccess(work.value.id, 'reader_open')
+  }
 })
 </script>

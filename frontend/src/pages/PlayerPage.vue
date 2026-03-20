@@ -9,7 +9,10 @@
     </header>
 
     <div class="player-shell">
-      <div class="player-shell__surface">{{ primaryFile?.name || '暂无视频文件' }}</div>
+      <div class="player-shell__surface">
+        <img v-if="work.current_cover" class="player-shell__preview" :src="work.current_cover.thumbnail_url" :alt="`${work.title} 预览图`" />
+        <span v-else>{{ primaryFile?.name || '暂无视频文件' }}</span>
+      </div>
       <aside class="panel">
         <h3>播放器扩展位</h3>
         <ul>
@@ -26,7 +29,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { fetchWork } from '../api/client'
+import { fetchWork, trackWorkAccess } from '../api/client'
 import type { Work } from '../types'
 
 const route = useRoute()
@@ -35,5 +38,8 @@ const primaryFile = computed(() => work.value?.files[0])
 
 onMounted(async () => {
   work.value = await fetchWork(route.params.id as string)
+  if (work.value) {
+    await trackWorkAccess(work.value.id, 'player_open')
+  }
 })
 </script>

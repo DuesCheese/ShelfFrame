@@ -14,6 +14,17 @@ class WorkType(str, Enum):
     VIDEO = "video"
 
 
+class ThumbnailType(str, Enum):
+    COVER = "cover"
+    KEYFRAME = "keyframe"
+
+
+class ActivityEventType(str, Enum):
+    DETAIL_OPEN = "detail_open"
+    READER_OPEN = "reader_open"
+    PLAYER_OPEN = "player_open"
+
+
 work_tags = Table(
     "work_tags",
     Base.metadata,
@@ -40,6 +51,8 @@ class Work(Base):
 
     files: Mapped[list[MediaFile]] = relationship(back_populates="work", cascade="all, delete-orphan")
     tags: Mapped[list[Tag]] = relationship(secondary=work_tags, back_populates="works")
+    thumbnails: Mapped[list[Thumbnail]] = relationship(back_populates="work", cascade="all, delete-orphan")
+    activity_events: Mapped[list[ActivityEvent]] = relationship(back_populates="work", cascade="all, delete-orphan")
 
 
 class MediaRoot(Base):
@@ -63,6 +76,34 @@ class MediaFile(Base):
     order_index: Mapped[int] = mapped_column(Integer, default=0)
 
     work: Mapped[Work] = relationship(back_populates="files")
+
+
+class Thumbnail(Base):
+    __tablename__ = "thumbnails"
+    __table_args__ = (UniqueConstraint("work_id", "image_path", name="uq_thumbnails_work_image_path"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    work_id: Mapped[int] = mapped_column(ForeignKey("works.id"), index=True)
+    type: Mapped[ThumbnailType] = mapped_column(SqlEnum(ThumbnailType), index=True)
+    source_path: Mapped[str | None] = mapped_column(String(1024), default=None)
+    image_path: Mapped[str] = mapped_column(String(1024))
+    ts_sec: Mapped[int | None] = mapped_column(Integer, default=None)
+    sort_no: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    work: Mapped[Work] = relationship(back_populates="thumbnails")
+
+
+class ActivityEvent(Base):
+    __tablename__ = "activity_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    work_id: Mapped[int] = mapped_column(ForeignKey("works.id"), index=True)
+    event_type: Mapped[ActivityEventType] = mapped_column(SqlEnum(ActivityEventType), index=True)
+    at_time: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    payload_json: Mapped[str | None] = mapped_column(Text, default=None)
+
+    work: Mapped[Work] = relationship(back_populates="activity_events")
 
 
 class Tag(Base):

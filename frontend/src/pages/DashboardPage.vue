@@ -33,18 +33,37 @@
       <p>{{ lastScan }}</p>
       <small v-if="roots.length">扫描目录：{{ roots.join('；') }}</small>
     </section>
+
+    <section class="panel">
+      <div class="row">
+        <h3>最近访问</h3>
+        <button @click="loadRecentActivity">刷新</button>
+      </div>
+      <div v-if="recentActivity.length" class="recent-list">
+        <RouterLink v-for="item in recentActivity" :key="item.work.id" class="recent-item" :to="`/works/${item.work.id}`">
+          <img v-if="item.work.cover_url" :src="item.work.cover_url" :alt="`${item.work.title} cover`" />
+          <div class="stack">
+            <strong>{{ item.work.title }}</strong>
+            <span>{{ eventTypeLabel(item.last_event.event_type) }}</span>
+            <small>{{ new Date(item.last_event.at_time).toLocaleString() }}</small>
+          </div>
+        </RouterLink>
+      </div>
+      <p v-else>最近还没有访问记录，可先进入详情页、阅读器或播放器。</p>
+    </section>
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { fetchSettings, fetchWorks, triggerScan } from '../api/client'
-import type { Settings, Work } from '../types'
+import { fetchRecentActivity, fetchSettings, fetchWorks, triggerScan } from '../api/client'
+import type { RecentActivity, Settings, Work } from '../types'
 
 const works = ref<Work[]>([])
 const roots = ref<string[]>([])
 const lastScan = ref('尚未执行')
 const settings = ref<Settings | null>(null)
+const recentActivity = ref<RecentActivity[]>([])
 
 const comicCount = computed(() => works.value.filter((work) => work.type === 'comic').length)
 const videoCount = computed(() => works.value.filter((work) => work.type === 'video').length)
@@ -58,6 +77,18 @@ async function loadSettings() {
   settings.value = await fetchSettings()
 }
 
+async function loadRecentActivity() {
+  recentActivity.value = await fetchRecentActivity()
+}
+
+function eventTypeLabel(type: string) {
+  return {
+    detail_open: '查看详情',
+    reader_open: '进入阅读器',
+    player_open: '进入播放器',
+  }[type] ?? type
+}
+
 async function scan() {
   const result = await triggerScan()
   roots.value = result.roots
@@ -66,6 +97,6 @@ async function scan() {
 }
 
 onMounted(async () => {
-  await Promise.all([loadWorks(), loadSettings()])
+  await Promise.all([loadWorks(), loadSettings(), loadRecentActivity()])
 })
 </script>
