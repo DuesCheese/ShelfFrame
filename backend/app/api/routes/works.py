@@ -3,8 +3,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.db import get_session
-from app.models import Tag, Work, WorkType
+from app.models import Work, WorkType
 from app.schemas import FileRead, SidecarActionResult, TagRead, WorkRead
+from app.services.search import apply_work_filters
 from app.services.sidecar import export_work_sidecar, import_work_sidecar
 
 router = APIRouter(prefix='/works', tags=['works'])
@@ -14,15 +15,13 @@ router = APIRouter(prefix='/works', tags=['works'])
 def list_works(
     work_type: WorkType | None = Query(default=None, alias='type'),
     tag: str | None = None,
+    q: str | None = Query(default=None, min_length=1),
     session: Session = Depends(get_session),
 ) -> list[WorkRead]:
     query = select(Work).options(selectinload(Work.files), selectinload(Work.tags)).order_by(Work.updated_at.desc())
-    if work_type is not None:
-        query = query.where(Work.type == work_type)
-    if tag:
-        query = query.join(Work.tags).where(Tag.name == tag)
+    query = apply_work_filters(query, work_type=work_type, tag=tag, search_term=q)
 
-    works = session.scalars(query).all()
+    works = session.scalars(query).unique().all()
     return [_serialize_work(work) for work in works]
 
 
