@@ -17,6 +17,7 @@ router = APIRouter(prefix='/works', tags=['works'])
 def list_works(
     work_type: WorkType | None = Query(default=None, alias='type'),
     tag: str | None = None,
+    q: str | None = Query(default=None, min_length=1),
     session: Session = Depends(get_session),
 ) -> list[WorkRead]:
     query = select(Work).options(selectinload(Work.files), selectinload(Work.tags), selectinload(Work.progress)).order_by(Work.updated_at.desc())
@@ -25,7 +26,7 @@ def list_works(
     if tag:
         query = query.join(Work.tags).where(Tag.name == tag)
 
-    works = session.scalars(query).all()
+    works = session.scalars(query).unique().all()
     return [_serialize_work(work) for work in works]
 
 
