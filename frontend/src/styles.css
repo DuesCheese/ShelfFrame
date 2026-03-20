@@ -1,0 +1,151 @@
+:root {
+  color-scheme: dark;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #020617 0%, #0f172a 100%);
+}
+
+button,
+a {
+  color: inherit;
+}
+
+button,
+.sidebar a,
+.page__header a {
+  background: #2563eb;
+  border: none;
+  border-radius: 999px;
+  color: white;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 0.4rem;
+  padding: 0.75rem 1rem;
+  text-decoration: none;
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100vh;
+}
+
+.sidebar {
+  background: rgba(15, 23, 42, 0.9);
+  border-right: 1px solid rgba(148, 163, 184, 0.15);
+  padding: 2rem 1rem;
+}
+
+.sidebar nav {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
+.content {
+  padding: 2rem;
+}
+
+.page {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.page__header {
+  align-items: start;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.eyebrow {
+  color: #60a5fa;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+}
+
+.stats,
+.grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.stat,
+.card,
+.panel,
+.reader__page,
+.player-shell__surface {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 1rem;
+  padding: 1rem;
+}
+
+.card {
+  display: grid;
+  gap: 1rem;
+}
+
+.card__cover {
+  align-items: center;
+  aspect-ratio: 4 / 3;
+  background: linear-gradient(135deg, #1d4ed8, #7c3aed);
+  border-radius: 0.75rem;
+  display: flex;
+  font-size: 1.2rem;
+  font-weight: 700;
+  justify-content: center;
+}
+
+.card__body {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.reader {
+  display: grid;
+  gap: 1rem;
+}
+
+.reader__placeholder,
+.player-shell__surface {
+  align-items: center;
+  aspect-ratio: 16 / 9;
+  background: rgba(30, 41, 59, 0.9);
+  border: 1px dashed rgba(96, 165, 250, 0.6);
+  border-radius: 0.75rem;
+  display: flex;
+  justify-content: center;
+}
+
+.player-shell {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 2fr 1fr;
+}
+
+@media (max-width: 900px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .player-shell,
+  .page__header {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+}
