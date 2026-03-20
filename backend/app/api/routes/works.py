@@ -3,6 +3,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 from sqlalchemy import select
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, selectinload
 
 from app.db import get_session
@@ -16,6 +17,8 @@ from app.schemas import (
     ThumbnailRead,
     WorkRead,
 )
+from app.models import MediaFile, Tag, Work, WorkType
+from app.schemas import FileRead, ReadingProgressRead, SidecarActionResult, TagRead, WorkRead
 from app.services.sidecar import export_work_sidecar, import_work_sidecar
 from app.services.thumbnails import generate_work_thumbnails, get_current_cover_thumbnail, set_work_cover
 
@@ -26,6 +29,7 @@ router = APIRouter(prefix='/works', tags=['works'])
 def list_works(
     work_type: WorkType | None = Query(default=None, alias='type'),
     tag: str | None = None,
+    q: str | None = Query(default=None, min_length=1),
     session: Session = Depends(get_session),
 ) -> list[WorkRead]:
     query = (
@@ -33,12 +37,13 @@ def list_works(
         .options(selectinload(Work.files), selectinload(Work.tags), selectinload(Work.thumbnails))
         .order_by(Work.updated_at.desc())
     )
+    query = select(Work).options(selectinload(Work.files), selectinload(Work.tags), selectinload(Work.progress)).order_by(Work.updated_at.desc())
     if work_type is not None:
         query = query.where(Work.type == work_type)
     if tag:
         query = query.join(Work.tags).where(Tag.name == tag)
 
-    works = session.scalars(query).all()
+    works = session.scalars(query).unique().all()
     return [_serialize_work(work) for work in works]
 
 
@@ -76,6 +81,7 @@ def select_cover(work_id: int, payload: CoverSelectRequest, session: Session = D
         .options(selectinload(Work.files), selectinload(Work.tags), selectinload(Work.thumbnails))
         .where(Work.id == work.id)
     )
+    work = session.scalar(select(Work).options(selectinload(Work.files), selectinload(Work.tags), selectinload(Work.progress)).where(Work.id == work_id))
     if work is None:
         raise HTTPException(status_code=404, detail='Work not found')
     return _serialize_work(work)
@@ -107,6 +113,19 @@ def get_thumbnail_content(work_id: int, thumbnail_id: int, session: Session = De
     if not path.exists():
         raise HTTPException(status_code=404, detail='Thumbnail file not found')
     return FileResponse(path)
+
+
+@router.get('/{work_id}/files/{file_id}/content')
+def get_work_file_content(work_id: int, file_id: int, session: Session = Depends(get_session)) -> FileResponse:
+    media_file = session.scalar(select(MediaFile).where(MediaFile.id == file_id, MediaFile.work_id == work_id))
+    if media_file is None:
+        raise HTTPException(status_code=404, detail='File not found')
+
+    file_path = Path(media_file.path)
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=404, detail='File content missing')
+
+    return FileResponse(file_path)
 
 
 @router.post('/{work_id}/export-sidecar', response_model=SidecarActionResult)
