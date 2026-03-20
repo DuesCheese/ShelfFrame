@@ -1,0 +1,20 @@
+[project]
+name = "shelfframe-backend"
+version = "0.1.0"
+description = "Backend service for ShelfFrame"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.116.0",
+  "uvicorn[standard]>=0.35.0",
+  "sqlalchemy>=2.0.38",
+  "pydantic-settings>=2.8.0"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3.5"
+]
+
+[build-system]
+requires = ["setuptools>=69.0"]
+build-backend = "setuptools.build_meta"

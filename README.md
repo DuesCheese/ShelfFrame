@@ -678,16 +678,16 @@
 
 ### 前端
 
-建议：**React + TypeScript**
+建议：**Vue 3 + TypeScript**
 原因：
 
 * 播放器、阅读器、复杂状态管理更容易组织
-* 搜索页、详情页、编辑页、时间轴交互都比较适合 React 生态
+* 搜索页、详情页、编辑页、时间轴交互都适合 Vue 的组合式 API 与组件化模式
 
 可选组件：
 
-* 路由：React Router
-* 状态管理：Zustand / Redux Toolkit
+* 路由：Vue Router
+* 状态管理：Pinia
 * UI：Tailwind + 组件库
 * 视频播放器层：原生 video + 自定义控制层
 
@@ -881,4 +881,97 @@
 ## 13. 一句话架构结论
 
 
-> **React 网页前端 + FastAPI 本地服务 + SQLite 元数据库 + sidecar 元数据文件 + ffmpeg 媒体处理 + 可扩展搜索模块** 的本地优先媒体库系统。
+> **Vue 网页前端 + FastAPI 本地服务 + SQLite 元数据库 + sidecar 元数据文件 + ffmpeg 媒体处理 + 可扩展搜索模块** 的本地优先媒体库系统。
+
+
+---
+
+## 6. 技术栈落地决策（已更新）
+
+为匹配当前开发阶段，项目骨架采用以下技术栈：
+
+* **后端**：Python + FastAPI
+* **数据库**：SQLite + SQLAlchemy
+* **前端**：Vue 3 + Vite
+* **扫描能力**：后端本地文件系统扫描服务
+* **阅读器 / 播放器**：前端先实现原型页面，后续逐步增强交互和媒体能力
+
+说明：
+
+* 该技术栈与 README 既有目标不冲突，可直接支持本地优先、数据库驱动、Web 前端的产品方向
+* 首阶段优先把“可运行骨架”搭起来，再逐步补齐 sidecar、标签、搜索增强、预览图、章节时间轴等能力
+
+## 7. 当前开发进度
+
+### 7.1 已完成骨架
+
+* [x] 建立 Python 后端工程目录 `backend/`
+* [x] 建立 FastAPI 应用入口与路由结构
+* [x] 建立 SQLite / SQLAlchemy 数据模型
+* [x] 实现媒体扫描服务原型（目录识别漫画、文件识别视频）
+* [x] 提供扫描接口、作品列表接口、作品详情接口、设置接口
+* [x] 建立 Vue 3 前端工程目录 `frontend/`
+* [x] 建立媒体库概览页、作品列表页、作品详情页
+* [x] 建立漫画阅读器原型页
+* [x] 建立视频播放器原型页
+* [x] 补充基础测试与开发忽略文件
+
+### 7.2 下一阶段计划
+
+* [ ] 增加媒体目录配置与持久化
+* [ ] 增加 sidecar `metadata.json` 读写
+* [ ] 增加标签 CRUD 与筛选
+* [ ] 增加全文 / 拼音 / 模糊搜索
+* [ ] 为阅读器增加分页模式、RTL、进度同步
+* [ ] 为播放器接入原生 `<video>`、章节标签、预览图、热度图
+* [ ] 增加缩略图生成、封面选择与最近访问记录
+* [ ] 增加任务状态、扫描日志、错误处理与测试覆盖率
+
+## 8. 项目结构
+
+```text
+ShelfFrame/
+├─ backend/
+│  ├─ app/
+│  │  ├─ api/routes/
+│  │  ├─ core/
+│  │  ├─ services/
+│  │  ├─ db.py
+│  │  ├─ main.py
+│  │  ├─ models.py
+│  │  └─ schemas.py
+│  └─ tests/
+├─ frontend/
+│  ├─ src/
+│  │  ├─ api/
+│  │  ├─ components/
+│  │  └─ pages/
+│  └─ package.json
+└─ README.md
+```
+
+## 9. 启动方式（骨架阶段）
+
+### 9.1 后端
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .[dev]
+uvicorn app.main:app --reload
+```
+
+### 9.2 前端
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+默认情况下：
+
+* 后端运行在 `http://127.0.0.1:8000`
+* 前端运行在 `http://127.0.0.1:5173`
+* Vite 已代理 `/api` 到本地后端
