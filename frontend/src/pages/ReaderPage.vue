@@ -93,9 +93,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { fetchReadingProgress, fetchWork, saveReadingProgress } from '../api/client'
-import { nextIndex, persistSnapshotWithRollback, snapshotForMode, snapshotFromProgress, type ReaderSnapshot } from '../reader/progress'
-import type { MediaFile, ReaderDirection, ReaderMode, Work } from '../types'
+import { fetchWork, trackWorkAccess } from '../api/client'
+import type { Work } from '../types'
 
 const route = useRoute()
 const work = ref<Work | null>(null)
@@ -222,39 +221,8 @@ function handleScroll() {
 
 async function loadReader() {
   work.value = await fetchWork(route.params.id as string)
-  const progress = await fetchReadingProgress(route.params.id as string)
-  const snapshot = snapshotFromProgress(progress ?? work.value.progress, work.value)
-  currentIndex.value = snapshot.file_index
-  activeScrollRatio.value = snapshot.position
-  lastSavedSnapshot = snapshot
-  saveStatus.value = progress ? `已恢复：第 ${snapshot.page} 页` : '首次进入，尚无进度'
-
-  await nextTick()
-  if (mode.value === 'scroll') {
-    const container = scrollContainer.value
-    if (container) {
-      const maxScroll = Math.max(container.scrollHeight - container.clientHeight, 0)
-      container.scrollTop = maxScroll * snapshot.position
-    }
+  if (work.value) {
+    await trackWorkAccess(work.value.id, 'reader_open')
   }
-}
-
-watch(mode, async () => {
-  await nextTick()
-  jumpToIndex(currentIndex.value, { immediate: true })
-})
-
-watch(direction, () => {
-  scheduleProgressSave()
-})
-
-onMounted(async () => {
-  await loadReader()
-  window.addEventListener('beforeunload', unloadHandler)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('beforeunload', unloadHandler)
-  void flushProgress()
 })
 </script>

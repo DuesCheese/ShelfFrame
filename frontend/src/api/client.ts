@@ -1,4 +1,4 @@
-import type { MediaRoot, ReadingProgress, ScanResult, Settings, Tag, Work } from '../types'
+import type { ActivityEventType, MediaRoot, RecentActivity, ScanResult, Settings, Tag, Work } from '../types'
 
 const jsonHeaders = {
   'Content-Type': 'application/json',
@@ -29,24 +29,35 @@ export async function fetchWork(id: string | number): Promise<Work> {
   return parseResponse<Work>(response, 'Failed to load work details')
 }
 
-export async function fetchReadingProgress(id: string | number): Promise<ReadingProgress | null> {
-  const response = await fetch(`/api/progress/${id}`)
-  if (response.status === 404) {
-    throw new Error('Work not found')
-  }
-  return parseResponse<ReadingProgress | null>(response, 'Failed to load reading progress')
+export async function generateThumbnails(id: number, force = false): Promise<{ work_id: number; generated: number }> {
+  const suffix = force ? '?force=true' : ''
+  const response = await fetch(`/api/works/${id}/generate-thumbnails${suffix}`, { method: 'POST' })
+  return parseResponse(response, 'Failed to generate thumbnails')
 }
 
-export async function saveReadingProgress(
-  id: string | number,
-  input: Pick<ReadingProgress, 'chapter_key' | 'file_index' | 'page' | 'position'>,
-): Promise<ReadingProgress> {
-  const response = await fetch(`/api/progress/${id}`, {
-    method: 'PUT',
+export async function updateWorkCover(id: number, thumbnailId: number): Promise<Work> {
+  const response = await fetch(`/api/works/${id}/cover`, {
+    method: 'POST',
     headers: jsonHeaders,
-    body: JSON.stringify(input),
+    body: JSON.stringify({ thumbnail_id: thumbnailId }),
   })
-  return parseResponse<ReadingProgress>(response, 'Failed to save reading progress')
+  return parseResponse(response, 'Failed to update cover')
+}
+
+export async function trackWorkAccess(id: number, eventType: ActivityEventType): Promise<void> {
+  const response = await fetch('/api/activity-events', {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify({ work_id: id, event_type: eventType }),
+  })
+  if (!response.ok) {
+    throw new Error('Failed to record access event')
+  }
+}
+
+export async function fetchRecentActivity(limit = 8): Promise<RecentActivity[]> {
+  const response = await fetch(`/api/activity-events/recent?limit=${limit}`)
+  return parseResponse(response, 'Failed to load recent activity')
 }
 
 export async function triggerScan(): Promise<ScanResult> {

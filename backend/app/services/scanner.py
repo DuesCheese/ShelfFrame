@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from sqlalchemy import select
@@ -19,6 +19,7 @@ class ScanSummary:
     created: int = 0
     updated: int = 0
     skipped: int = 0
+    touched_work_ids: list[int] = field(default_factory=list)
 
 
 def scan_library(session: Session, root: Path) -> ScanSummary:
@@ -77,6 +78,7 @@ def _upsert_work(session: Session, entry: Path, work_type: WorkType, files: list
         work.files.clear()
         summary.updated += 1
 
+    summary.touched_work_ids.append(work.id)
     _sync_tags_from_sidecar(session, work, sidecar_payload)
 
     for index, file in enumerate(files):

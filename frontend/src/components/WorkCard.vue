@@ -1,7 +1,8 @@
 <template>
   <article class="card">
     <div class="card__cover">
-      <span>{{ work.type === 'comic' ? '漫画' : '视频' }}</span>
+      <img v-if="work.cover_url" :src="work.cover_url" :alt="`${work.title} cover`" />
+      <span v-else>{{ work.type === 'comic' ? '漫画' : '视频' }}</span>
     </div>
     <div class="card__body">
       <h3>{{ work.title }}</h3>
