@@ -1,4 +1,5 @@
 export type WorkType = 'comic' | 'video'
+export type PlaybackEventType = 'play' | 'seek'
 
 export interface MediaFile {
   id: number
@@ -16,6 +17,38 @@ export interface Tag {
   group_name?: string | null
 }
 
+export interface VideoChapter {
+  label: string
+  start_seconds: number
+  end_seconds: number
+}
+
+export interface HoverThumbnail {
+  time_seconds: number
+  image_url: string
+  width?: number | null
+  height?: number | null
+}
+
+export interface HoverThumbnailManifest {
+  status: string
+  items: HoverThumbnail[]
+}
+
+export interface HeatmapBucket {
+  start_seconds: number
+  end_seconds: number
+  intensity: number
+  event_count: number
+}
+
+export interface VideoPlayerMetadata {
+  source_url?: string | null
+  chapters: VideoChapter[]
+  hover_thumbnails: HoverThumbnailManifest
+  heatmap: HeatmapBucket[]
+}
+
 export interface Work {
   id: number
   title: string
@@ -27,6 +60,7 @@ export interface Work {
   updated_at: string
   tags: Tag[]
   files: MediaFile[]
+  player_metadata?: VideoPlayerMetadata | null
 }
 
 export interface ScanResult {

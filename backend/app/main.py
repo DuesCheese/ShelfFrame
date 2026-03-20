@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes.health import router as health_router
+from app.api.routes.media import router as media_router
 from app.api.routes.scan import router as scan_router
 from app.api.routes.settings import router as settings_router
 from app.api.routes.tags import router as tags_router
@@ -32,3 +33,4 @@ app.include_router(settings_router, prefix=settings.api_prefix)
 app.include_router(scan_router, prefix=settings.api_prefix)
 app.include_router(tags_router, prefix=settings.api_prefix)
 app.include_router(works_router, prefix=settings.api_prefix)
+app.include_router(media_router, prefix=settings.api_prefix)

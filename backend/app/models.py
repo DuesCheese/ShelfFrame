@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from enum import Enum
 
-from sqlalchemy import Column, DateTime, Enum as SqlEnum, ForeignKey, Integer, String, Table, Text, UniqueConstraint
+from sqlalchemy import Column, DateTime, Enum as SqlEnum, Float, ForeignKey, Integer, String, Table, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -40,6 +40,7 @@ class Work(Base):
 
     files: Mapped[list[MediaFile]] = relationship(back_populates="work", cascade="all, delete-orphan")
     tags: Mapped[list[Tag]] = relationship(secondary=work_tags, back_populates="works")
+    playback_events: Mapped[list[PlaybackEvent]] = relationship(back_populates="work", cascade="all, delete-orphan")
 
 
 class MediaRoot(Base):
@@ -63,6 +64,25 @@ class MediaFile(Base):
     order_index: Mapped[int] = mapped_column(Integer, default=0)
 
     work: Mapped[Work] = relationship(back_populates="files")
+
+
+class PlaybackEventType(str, Enum):
+    PLAY = "play"
+    SEEK = "seek"
+
+
+class PlaybackEvent(Base):
+    __tablename__ = "playback_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    work_id: Mapped[int] = mapped_column(ForeignKey("works.id"), index=True)
+    event_type: Mapped[PlaybackEventType] = mapped_column(SqlEnum(PlaybackEventType), index=True)
+    from_seconds: Mapped[float | None] = mapped_column(Float, default=None)
+    to_seconds: Mapped[float] = mapped_column(Float)
+    duration_seconds: Mapped[float | None] = mapped_column(Float, default=None)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+
+    work: Mapped[Work] = relationship(back_populates="playback_events")
 
 
 class Tag(Base):

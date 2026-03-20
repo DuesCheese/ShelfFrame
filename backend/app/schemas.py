@@ -5,7 +5,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
-from app.models import WorkType
+from app.models import PlaybackEventType, WorkType
 
 
 class FileRead(BaseModel):
@@ -40,6 +40,38 @@ class MediaRootRead(BaseModel):
     enabled: bool
 
 
+class VideoChapterRead(BaseModel):
+    label: str
+    start_seconds: float
+    end_seconds: float
+
+
+class HoverThumbnailRead(BaseModel):
+    time_seconds: float
+    image_url: str
+    width: int | None = None
+    height: int | None = None
+
+
+class HoverThumbnailManifestRead(BaseModel):
+    status: str = 'pending'
+    items: list[HoverThumbnailRead] = Field(default_factory=list)
+
+
+class HeatmapBucketRead(BaseModel):
+    start_seconds: float
+    end_seconds: float
+    intensity: float
+    event_count: int
+
+
+class VideoPlayerMetadataRead(BaseModel):
+    source_url: str | None = None
+    chapters: list[VideoChapterRead] = Field(default_factory=list)
+    hover_thumbnails: HoverThumbnailManifestRead = Field(default_factory=HoverThumbnailManifestRead)
+    heatmap: list[HeatmapBucketRead] = Field(default_factory=list)
+
+
 class WorkRead(BaseModel):
     id: int
     title: str
@@ -51,6 +83,7 @@ class WorkRead(BaseModel):
     updated_at: datetime
     tags: list[TagRead] = Field(default_factory=list)
     files: list[FileRead] = Field(default_factory=list)
+    player_metadata: VideoPlayerMetadataRead | None = None
 
 
 class ScanRequest(BaseModel):
@@ -74,3 +107,20 @@ class SidecarActionResult(BaseModel):
     work_id: int
     sidecar_path: str
     action: str
+
+
+class PlaybackEventCreate(BaseModel):
+    event_type: PlaybackEventType
+    from_seconds: float | None = None
+    to_seconds: float = Field(ge=0)
+    duration_seconds: float | None = Field(default=None, ge=0)
+
+
+class PlaybackEventAck(BaseModel):
+    work_id: int
+    accepted: bool
+
+
+class MediaFileUrlRead(BaseModel):
+    file_id: int
+    url: str

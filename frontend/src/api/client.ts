@@ -1,4 +1,12 @@
-import type { MediaRoot, ScanResult, Settings, Tag, Work } from '../types'
+import type {
+  MediaRoot,
+  PlaybackEventType,
+  ScanResult,
+  Settings,
+  Tag,
+  VideoPlayerMetadata,
+  Work,
+} from '../types'
 
 const jsonHeaders = {
   'Content-Type': 'application/json',
@@ -9,6 +17,10 @@ async function parseResponse<T>(response: Response, message: string): Promise<T>
     throw new Error(message)
   }
   return response.json() as Promise<T>
+}
+
+export function buildMediaFileUrl(fileId: number): string {
+  return `/api/media/files/${fileId}`
 }
 
 export async function fetchWorks(params?: { type?: string; tag?: string }): Promise<Work[]> {
@@ -23,6 +35,23 @@ export async function fetchWorks(params?: { type?: string; tag?: string }): Prom
 export async function fetchWork(id: string | number): Promise<Work> {
   const response = await fetch(`/api/works/${id}`)
   return parseResponse<Work>(response, 'Failed to load work details')
+}
+
+export async function fetchPlayerMetadata(id: string | number): Promise<VideoPlayerMetadata> {
+  const response = await fetch(`/api/works/${id}/player-metadata`)
+  return parseResponse<VideoPlayerMetadata>(response, 'Failed to load player metadata')
+}
+
+export async function createPlaybackEvent(
+  id: string | number,
+  input: { event_type: PlaybackEventType; from_seconds?: number; to_seconds: number; duration_seconds?: number },
+): Promise<{ accepted: boolean }> {
+  const response = await fetch(`/api/works/${id}/playback-events`, {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(input),
+  })
+  return parseResponse(response, 'Failed to store playback event')
 }
 
 export async function triggerScan(): Promise<ScanResult> {
