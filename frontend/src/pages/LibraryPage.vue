@@ -25,7 +25,11 @@
       </div>
     </header>
 
-    <div class="grid">
+    <div v-if="errorMessage" class="notice notice--error">
+      <strong>加载失败：</strong>{{ errorMessage }}
+    </div>
+
+    <div class="grid" v-if="!errorMessage">
       <WorkCard v-for="work in works" :key="work.id" :work="work" />
     </div>
   </section>
@@ -41,19 +45,31 @@ const works = ref<Work[]>([])
 const tags = ref<Tag[]>([])
 const selectedType = ref('')
 const selectedTag = ref('')
-const searchQuery = ref('')
+const errorMessage = ref('')
 
 async function loadWorks() {
-  works.value = await fetchWorks({
-    type: selectedType.value || undefined,
-    tag: selectedTag.value || undefined,
-    q: searchQuery.value || undefined,
-  })
+  errorMessage.value = ''
+  try {
+    works.value = await fetchWorks({
+      type: selectedType.value || undefined,
+      tag: selectedTag.value || undefined,
+    })
+  } catch (error) {
+    works.value = []
+    errorMessage.value = error instanceof Error ? error.message : '无法加载作品列表'
+  }
+}
+
+async function loadTags() {
+  try {
+    tags.value = await fetchTags()
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '无法加载标签列表'
+  }
 }
 
 onMounted(async () => {
-  const [loadedTags] = await Promise.all([fetchTags(), loadWorks()])
-  tags.value = loadedTags
+  await Promise.all([loadWorks(), loadTags()])
 })
 </script>
 

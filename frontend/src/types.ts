@@ -1,6 +1,6 @@
 export type WorkType = 'comic' | 'video'
-export type ThumbnailType = 'cover' | 'keyframe'
-export type ActivityEventType = 'detail_open' | 'reader_open' | 'player_open'
+export type ScanTaskStatus = 'running' | 'succeeded' | 'completed_with_errors' | 'failed'
+export type ScanLogLevel = 'info' | 'warning' | 'error'
 
 export interface MediaFile {
   id: number
@@ -65,12 +65,36 @@ export interface RecentActivity {
   }
 }
 
-export interface ScanResult {
+export interface ScanLog {
+  id: number
+  level: ScanLogLevel
+  code?: string | null
+  path?: string | null
+  message: string
+  created_at: string
+}
+
+export interface ScanTask {
+  id: number
+  root_path: string
+  status: ScanTaskStatus
+  started_at: string
+  finished_at?: string | null
+  error_message?: string | null
+  discovered: number
+  created: number
+  updated: number
+  skipped: number
+  logs: ScanLog[]
+}
+
+export interface ScanRunResult {
   discovered: number
   created: number
   updated: number
   skipped: number
   roots: string[]
+  tasks: ScanTask[]
 }
 
 export interface MediaRoot {

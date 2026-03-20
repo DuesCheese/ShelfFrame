@@ -9,6 +9,10 @@ from app.core.config import settings
 from app.models import MediaRoot
 
 
+class MediaRootValidationError(ValueError):
+    pass
+
+
 def bootstrap_media_root(session: Session) -> None:
     existing = session.scalars(select(MediaRoot)).first()
     if existing is None:
@@ -21,7 +25,11 @@ def list_media_roots(session: Session) -> list[MediaRoot]:
 
 
 def add_media_root(session: Session, path: Path) -> MediaRoot:
-    resolved = str(path.expanduser().resolve())
+    resolved_path = path.expanduser().resolve()
+    if resolved_path.exists() and not resolved_path.is_dir():
+        raise MediaRootValidationError('Media root must be a directory path')
+
+    resolved = str(resolved_path)
     media_root = session.scalar(select(MediaRoot).where(MediaRoot.path == resolved))
     if media_root is None:
         media_root = MediaRoot(path=resolved, enabled=True)

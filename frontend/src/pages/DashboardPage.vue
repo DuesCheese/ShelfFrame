@@ -77,17 +77,6 @@ async function loadSettings() {
   settings.value = await fetchSettings()
 }
 
-async function loadRecentActivity() {
-  recentActivity.value = await fetchRecentActivity()
-}
-
-function eventTypeLabel(type: string) {
-  return {
-    detail_open: '查看详情',
-    reader_open: '进入阅读器',
-    player_open: '进入播放器',
-  }[type] ?? type
-}
 
 async function scan() {
   const result = await triggerScan()

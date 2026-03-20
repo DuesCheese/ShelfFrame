@@ -7,20 +7,9 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, selectinload
 
 from app.db import get_session
-from app.models import Tag, Thumbnail, Work, WorkType
-from app.schemas import (
-    CoverSelectRequest,
-    FileRead,
-    SidecarActionResult,
-    TagRead,
-    ThumbnailGenerationResult,
-    ThumbnailRead,
-    WorkRead,
-)
-from app.models import MediaFile, Tag, Work, WorkType
-from app.schemas import FileRead, ReadingProgressRead, SidecarActionResult, TagRead, WorkRead
-from app.services.sidecar import export_work_sidecar, import_work_sidecar
-from app.services.thumbnails import generate_work_thumbnails, get_current_cover_thumbnail, set_work_cover
+from app.models import Tag, Work, WorkType
+from app.schemas import FileRead, SidecarActionResult, TagRead, WorkRead
+from app.services.sidecar import SidecarParseError, export_work_sidecar, import_work_sidecar
 
 router = APIRouter(prefix='/works', tags=['works'])
 
@@ -146,6 +135,8 @@ def import_sidecar(work_id: int, session: Session = Depends(get_session)) -> Sid
         raise HTTPException(status_code=404, detail=str(error)) from error
     except FileNotFoundError as error:
         raise HTTPException(status_code=404, detail=f'Sidecar not found: {error.filename or error}') from error
+    except SidecarParseError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
 
     return SidecarActionResult(work_id=work_id, sidecar_path=str(sidecar_path), action='imported')
 
