@@ -9,6 +9,17 @@ export interface MediaFile {
   kind: string
   size_bytes: number | null
   order_index: number
+  content_url?: string | null
+}
+
+export interface Thumbnail {
+  id: number
+  type: ThumbnailType
+  source_path?: string | null
+  image_path: string
+  ts_sec?: number | null
+  sort_no: number
+  thumbnail_url: string
 }
 
 export interface Tag {
@@ -18,6 +29,15 @@ export interface Tag {
   group_name?: string | null
 }
 
+export interface ReadingProgress {
+  work_id: number
+  chapter_key?: string | null
+  file_index: number
+  page: number
+  position: number
+  updated_at: string
+}
+
 export interface Work {
   id: number
   title: string
@@ -25,10 +45,24 @@ export interface Work {
   type: WorkType
   summary?: string | null
   cover_path?: string | null
+  cover_url?: string | null
   created_at: string
   updated_at: string
   tags: Tag[]
   files: MediaFile[]
+  thumbnails: Thumbnail[]
+  current_cover?: Thumbnail | null
+}
+
+export interface RecentActivity {
+  work: Work
+  last_event: {
+    id: number
+    work_id: number
+    event_type: ActivityEventType
+    at_time: string
+    payload_json?: string | null
+  }
 }
 
 export interface ScanLog {

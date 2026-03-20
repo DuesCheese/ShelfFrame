@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -15,6 +16,17 @@ class FileRead(BaseModel):
     kind: str
     size_bytes: int | None
     order_index: int
+    content_url: str | None = None
+
+
+class ThumbnailRead(BaseModel):
+    id: int
+    type: ThumbnailType
+    source_path: str | None = None
+    image_path: str
+    ts_sec: int | None = None
+    sort_no: int
+    thumbnail_url: str
 
 
 class TagCreate(BaseModel):
@@ -40,6 +52,22 @@ class MediaRootRead(BaseModel):
     enabled: bool
 
 
+class ReadingProgressRead(BaseModel):
+    work_id: int
+    chapter_key: str | None = None
+    file_index: int = 0
+    page: int = 1
+    position: float = 0.0
+    updated_at: datetime
+
+
+class ReadingProgressUpsert(BaseModel):
+    chapter_key: str | None = None
+    file_index: int = 0
+    page: int = 1
+    position: float = 0.0
+
+
 class WorkRead(BaseModel):
     id: int
     title: str
@@ -47,10 +75,13 @@ class WorkRead(BaseModel):
     type: WorkType
     summary: str | None = None
     cover_path: str | None = None
+    cover_url: str | None = None
     created_at: datetime
     updated_at: datetime
     tags: list[TagRead] = Field(default_factory=list)
     files: list[FileRead] = Field(default_factory=list)
+    thumbnails: list[ThumbnailRead] = Field(default_factory=list)
+    current_cover: ThumbnailRead | None = None
 
 
 class ScanRequest(BaseModel):
@@ -98,3 +129,32 @@ class SidecarActionResult(BaseModel):
     work_id: int
     sidecar_path: str
     action: str
+
+
+class ThumbnailGenerationResult(BaseModel):
+    work_id: int
+    generated: int
+    action: str
+
+
+class CoverSelectRequest(BaseModel):
+    thumbnail_id: int
+
+
+class ActivityEventCreate(BaseModel):
+    work_id: int
+    event_type: ActivityEventType
+    payload: dict[str, Any] | None = None
+
+
+class ActivityEventRead(BaseModel):
+    id: int
+    work_id: int
+    event_type: ActivityEventType
+    at_time: datetime
+    payload_json: str | None = None
+
+
+class RecentActivityRead(BaseModel):
+    work: WorkRead
+    last_event: ActivityEventRead

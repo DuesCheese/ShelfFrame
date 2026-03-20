@@ -24,13 +24,17 @@ async function parseResponse<T>(response: Response, message: string): Promise<T>
   if (!response.ok) {
     throw new Error(await readErrorMessage(response, message))
   }
+  if (response.status === 204) {
+    return undefined as T
+  }
   return response.json() as Promise<T>
 }
 
-export async function fetchWorks(params?: { type?: string; tag?: string }): Promise<Work[]> {
+export async function fetchWorks(params?: { type?: string; tag?: string; q?: string }): Promise<Work[]> {
   const search = new URLSearchParams()
   if (params?.type) search.set('type', params.type)
   if (params?.tag) search.set('tag', params.tag)
+  if (params?.q) search.set('q', params.q)
   const suffix = search.toString() ? `?${search.toString()}` : ''
   const response = await fetch(`/api/works${suffix}`)
   return parseResponse<Work[]>(response, 'Failed to load works')

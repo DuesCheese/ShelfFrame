@@ -44,7 +44,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { exportSidecar, fetchWork, importSidecar } from '../api/client'
+import { exportSidecar, fetchWork, generateThumbnails, importSidecar, trackWorkAccess, updateWorkCover } from '../api/client'
 import type { Work } from '../types'
 
 const route = useRoute()
@@ -61,6 +61,19 @@ async function loadWork() {
     work.value = null
     errorMessage.value = error instanceof Error ? error.message : '无法加载作品详情'
   }
+}
+
+async function handleGenerateThumbnails(force: boolean) {
+  if (!work.value) return
+  const result = await generateThumbnails(work.value.id, force)
+  statusMessage.value = `已生成 ${result.generated} 张缩略图`
+  await loadWork()
+}
+
+async function handleSelectCover(thumbnailId: number) {
+  if (!work.value) return
+  work.value = await updateWorkCover(work.value.id, thumbnailId)
+  statusMessage.value = '封面已更新'
 }
 
 async function handleExport() {
@@ -88,5 +101,10 @@ async function handleImport() {
   }
 }
 
-onMounted(loadWork)
+onMounted(async () => {
+  await loadWork()
+  if (work.value) {
+    await trackWorkAccess(work.value.id, 'detail_open')
+  }
+})
 </script>

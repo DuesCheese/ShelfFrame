@@ -6,6 +6,13 @@
         <h2>作品列表</h2>
       </div>
       <div class="filters">
+        <input
+          v-model.trim="searchQuery"
+          class="filters__search"
+          type="search"
+          placeholder="搜索标题、简介、标签"
+          @input="loadWorks"
+        />
         <select v-model="selectedType" @change="loadWorks">
           <option value="">全部类型</option>
           <option value="comic">漫画</option>
@@ -65,3 +72,9 @@ onMounted(async () => {
   await Promise.all([loadWorks(), loadTags()])
 })
 </script>
+
+<style scoped>
+.filters__search {
+  min-width: 16rem;
+}
+</style>
