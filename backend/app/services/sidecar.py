@@ -6,11 +6,19 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.models import Tag, Work
+from app.models import Tag, Work, WorkType
 
 
 SIDE_CAR_FILENAME = 'metadata.json'
 VIDEO_SIDE_CAR_SUFFIX = '.metadata.json'
+DEFAULT_VIDEO_METADATA = {
+    'duration_seconds': None,
+    'chapters': [],
+    'hover_thumbnails': {
+        'status': 'pending',
+        'items': [],
+    },
+}
 
 
 def resolve_sidecar_path(work: Work) -> Path:
@@ -34,8 +42,9 @@ def export_work_sidecar(session: Session, work_id: int) -> Path:
 
     sidecar_path = resolve_sidecar_path(work)
     sidecar_path.parent.mkdir(parents=True, exist_ok=True)
+    current_payload = _load_existing_payload(sidecar_path)
     payload = {
-        'schema_version': 1,
+        'schema_version': 2,
         'work_id': work.id,
         'type': work.type.value,
         'title': work.title,
@@ -52,6 +61,8 @@ def export_work_sidecar(session: Session, work_id: int) -> Path:
             for media_file in sorted(work.files, key=lambda item: item.order_index)
         ],
     }
+    if work.type == WorkType.VIDEO:
+        payload['video'] = _merge_video_payload(current_payload.get('video'))
     sidecar_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding='utf-8')
     return sidecar_path
 
@@ -88,3 +99,22 @@ def _get_or_create_tag(session: Session, name: str) -> Tag:
         session.add(tag)
         session.flush()
     return tag
+
+
+def _load_existing_payload(sidecar_path: Path) -> dict:
+    if not sidecar_path.exists():
+        return {}
+    try:
+        return json.loads(sidecar_path.read_text(encoding='utf-8'))
+    except json.JSONDecodeError:
+        return {}
+
+
+def _merge_video_payload(raw_value: object) -> dict:
+    payload = DEFAULT_VIDEO_METADATA | (raw_value if isinstance(raw_value, dict) else {})
+    hover_thumbnails = DEFAULT_VIDEO_METADATA['hover_thumbnails'] | (
+        payload.get('hover_thumbnails') if isinstance(payload.get('hover_thumbnails'), dict) else {}
+    )
+    payload['hover_thumbnails'] = hover_thumbnails
+    payload['chapters'] = payload.get('chapters') if isinstance(payload.get('chapters'), list) else []
+    return payload

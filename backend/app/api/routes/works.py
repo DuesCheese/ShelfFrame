@@ -7,18 +7,9 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, selectinload
 
 from app.db import get_session
-from app.models import Tag, Thumbnail, Work, WorkType
-from app.schemas import (
-    CoverSelectRequest,
-    FileRead,
-    SidecarActionResult,
-    TagRead,
-    ThumbnailGenerationResult,
-    ThumbnailRead,
-    WorkRead,
-)
-from app.models import MediaFile, Tag, Work, WorkType
-from app.schemas import FileRead, ReadingProgressRead, SidecarActionResult, TagRead, WorkRead
+from app.models import Tag, Work, WorkType
+from app.schemas import FileRead, PlaybackEventAck, PlaybackEventCreate, SidecarActionResult, TagRead, VideoPlayerMetadataRead, WorkRead
+from app.services.player_metadata import load_video_player_metadata, record_playback_event
 from app.services.sidecar import export_work_sidecar, import_work_sidecar
 from app.services.thumbnails import generate_work_thumbnails, get_current_cover_thumbnail, set_work_cover
 
@@ -43,48 +34,38 @@ def list_works(
     if tag:
         query = query.join(Work.tags).where(Tag.name == tag)
 
-    works = session.scalars(query).unique().all()
-    return [_serialize_work(work) for work in works]
+    works = session.scalars(query).all()
+    return [_serialize_work(session, work) for work in works]
 
 
 @router.get('/{work_id}', response_model=WorkRead)
 def get_work(work_id: int, session: Session = Depends(get_session)) -> WorkRead:
-    work = session.scalar(
-        select(Work)
-        .options(selectinload(Work.files), selectinload(Work.tags), selectinload(Work.thumbnails))
-        .where(Work.id == work_id)
+    work = _load_work(session, work_id)
+    return _serialize_work(session, work)
+
+
+@router.get('/{work_id}/player-metadata', response_model=VideoPlayerMetadataRead)
+def get_player_metadata(work_id: int, session: Session = Depends(get_session)) -> VideoPlayerMetadataRead:
+    work = _load_work(session, work_id)
+    if work.type != WorkType.VIDEO:
+        raise HTTPException(status_code=400, detail='Player metadata is only available for video works')
+    return load_video_player_metadata(session, work)
+
+
+@router.post('/{work_id}/playback-events', response_model=PlaybackEventAck)
+def create_playback_event(work_id: int, payload: PlaybackEventCreate, session: Session = Depends(get_session)) -> PlaybackEventAck:
+    work = _load_work(session, work_id)
+    if work.type != WorkType.VIDEO:
+        raise HTTPException(status_code=400, detail='Playback events are only available for video works')
+    record_playback_event(
+        session,
+        work,
+        payload.event_type,
+        to_seconds=payload.to_seconds,
+        from_seconds=payload.from_seconds,
+        duration_seconds=payload.duration_seconds,
     )
-    if work is None:
-        raise HTTPException(status_code=404, detail='Work not found')
-    return _serialize_work(work)
-
-
-@router.post('/{work_id}/generate-thumbnails', response_model=ThumbnailGenerationResult)
-def generate_thumbnails(work_id: int, force: bool = Query(default=False), session: Session = Depends(get_session)) -> ThumbnailGenerationResult:
-    try:
-        thumbnails = generate_work_thumbnails(session, work_id, force=force)
-    except ValueError as error:
-        raise HTTPException(status_code=404, detail=str(error)) from error
-
-    return ThumbnailGenerationResult(work_id=work_id, generated=len(thumbnails), action='generated')
-
-
-@router.post('/{work_id}/cover', response_model=WorkRead)
-def select_cover(work_id: int, payload: CoverSelectRequest, session: Session = Depends(get_session)) -> WorkRead:
-    try:
-        work = set_work_cover(session, work_id, payload.thumbnail_id)
-    except ValueError as error:
-        raise HTTPException(status_code=404, detail=str(error)) from error
-
-    work = session.scalar(
-        select(Work)
-        .options(selectinload(Work.files), selectinload(Work.tags), selectinload(Work.thumbnails))
-        .where(Work.id == work.id)
-    )
-    work = session.scalar(select(Work).options(selectinload(Work.files), selectinload(Work.tags), selectinload(Work.progress)).where(Work.id == work_id))
-    if work is None:
-        raise HTTPException(status_code=404, detail='Work not found')
-    return _serialize_work(work)
+    return PlaybackEventAck(work_id=work_id, accepted=True)
 
 
 @router.get('/{work_id}/cover')
@@ -150,33 +131,15 @@ def import_sidecar(work_id: int, session: Session = Depends(get_session)) -> Sid
     return SidecarActionResult(work_id=work_id, sidecar_path=str(sidecar_path), action='imported')
 
 
+def _load_work(session: Session, work_id: int) -> Work:
+    work = session.scalar(select(Work).options(selectinload(Work.files), selectinload(Work.tags)).where(Work.id == work_id))
+    if work is None:
+        raise HTTPException(status_code=404, detail='Work not found')
+    return work
 
-def _serialize_work(work: Work) -> WorkRead:
-    thumbnails = [
-        ThumbnailRead(
-            id=thumbnail.id,
-            type=thumbnail.type,
-            source_path=thumbnail.source_path,
-            image_path=thumbnail.image_path,
-            ts_sec=thumbnail.ts_sec,
-            sort_no=thumbnail.sort_no,
-            thumbnail_url=f'/api/works/{work.id}/thumbnails/{thumbnail.id}',
-        )
-        for thumbnail in sorted(work.thumbnails, key=lambda item: item.sort_no)
-    ]
-    current_cover = get_current_cover_thumbnail(work)
-    current_cover_read = None
-    if current_cover is not None:
-        current_cover_read = ThumbnailRead(
-            id=current_cover.id,
-            type=current_cover.type,
-            source_path=current_cover.source_path,
-            image_path=current_cover.image_path,
-            ts_sec=current_cover.ts_sec,
-            sort_no=current_cover.sort_no,
-            thumbnail_url=f'/api/works/{work.id}/thumbnails/{current_cover.id}',
-        )
 
+def _serialize_work(session: Session, work: Work) -> WorkRead:
+    player_metadata = load_video_player_metadata(session, work) if work.type == WorkType.VIDEO else None
     return WorkRead(
         id=work.id,
         title=work.title,
@@ -189,6 +152,5 @@ def _serialize_work(work: Work) -> WorkRead:
         updated_at=work.updated_at,
         tags=[TagRead.model_validate(tag, from_attributes=True) for tag in work.tags],
         files=[FileRead.model_validate(media_file, from_attributes=True) for media_file in sorted(work.files, key=lambda item: item.order_index)],
-        thumbnails=thumbnails,
-        current_cover=current_cover_read,
+        player_metadata=player_metadata,
     )

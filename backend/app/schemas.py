@@ -6,7 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from app.models import ActivityEventType, ThumbnailType, WorkType
+from app.models import PlaybackEventType, WorkType
 
 
 class FileRead(BaseModel):
@@ -52,20 +52,36 @@ class MediaRootRead(BaseModel):
     enabled: bool
 
 
-class ReadingProgressRead(BaseModel):
-    work_id: int
-    chapter_key: str | None = None
-    file_index: int = 0
-    page: int = 1
-    position: float = 0.0
-    updated_at: datetime
+class VideoChapterRead(BaseModel):
+    label: str
+    start_seconds: float
+    end_seconds: float
 
 
-class ReadingProgressUpsert(BaseModel):
-    chapter_key: str | None = None
-    file_index: int = 0
-    page: int = 1
-    position: float = 0.0
+class HoverThumbnailRead(BaseModel):
+    time_seconds: float
+    image_url: str
+    width: int | None = None
+    height: int | None = None
+
+
+class HoverThumbnailManifestRead(BaseModel):
+    status: str = 'pending'
+    items: list[HoverThumbnailRead] = Field(default_factory=list)
+
+
+class HeatmapBucketRead(BaseModel):
+    start_seconds: float
+    end_seconds: float
+    intensity: float
+    event_count: int
+
+
+class VideoPlayerMetadataRead(BaseModel):
+    source_url: str | None = None
+    chapters: list[VideoChapterRead] = Field(default_factory=list)
+    hover_thumbnails: HoverThumbnailManifestRead = Field(default_factory=HoverThumbnailManifestRead)
+    heatmap: list[HeatmapBucketRead] = Field(default_factory=list)
 
 
 class WorkRead(BaseModel):
@@ -80,8 +96,7 @@ class WorkRead(BaseModel):
     updated_at: datetime
     tags: list[TagRead] = Field(default_factory=list)
     files: list[FileRead] = Field(default_factory=list)
-    thumbnails: list[ThumbnailRead] = Field(default_factory=list)
-    current_cover: ThumbnailRead | None = None
+    player_metadata: VideoPlayerMetadataRead | None = None
 
 
 class ScanRequest(BaseModel):
@@ -107,30 +122,18 @@ class SidecarActionResult(BaseModel):
     action: str
 
 
-class ThumbnailGenerationResult(BaseModel):
+class PlaybackEventCreate(BaseModel):
+    event_type: PlaybackEventType
+    from_seconds: float | None = None
+    to_seconds: float = Field(ge=0)
+    duration_seconds: float | None = Field(default=None, ge=0)
+
+
+class PlaybackEventAck(BaseModel):
     work_id: int
-    generated: int
-    action: str
+    accepted: bool
 
 
-class CoverSelectRequest(BaseModel):
-    thumbnail_id: int
-
-
-class ActivityEventCreate(BaseModel):
-    work_id: int
-    event_type: ActivityEventType
-    payload: dict[str, Any] | None = None
-
-
-class ActivityEventRead(BaseModel):
-    id: int
-    work_id: int
-    event_type: ActivityEventType
-    at_time: datetime
-    payload_json: str | None = None
-
-
-class RecentActivityRead(BaseModel):
-    work: WorkRead
-    last_event: ActivityEventRead
+class MediaFileUrlRead(BaseModel):
+    file_id: int
+    url: str
