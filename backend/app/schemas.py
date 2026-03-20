@@ -15,6 +15,7 @@ class FileRead(BaseModel):
     kind: str
     size_bytes: int | None
     order_index: int
+    content_url: str | None = None
 
 
 class TagCreate(BaseModel):
@@ -40,6 +41,22 @@ class MediaRootRead(BaseModel):
     enabled: bool
 
 
+class ReadingProgressRead(BaseModel):
+    work_id: int
+    chapter_key: str | None = None
+    file_index: int = 0
+    page: int = 1
+    position: float = 0.0
+    updated_at: datetime
+
+
+class ReadingProgressUpsert(BaseModel):
+    chapter_key: str | None = None
+    file_index: int = 0
+    page: int = 1
+    position: float = 0.0
+
+
 class WorkRead(BaseModel):
     id: int
     title: str
@@ -51,6 +68,7 @@ class WorkRead(BaseModel):
     updated_at: datetime
     tags: list[TagRead] = Field(default_factory=list)
     files: list[FileRead] = Field(default_factory=list)
+    progress: ReadingProgressRead | None = None
 
 
 class ScanRequest(BaseModel):

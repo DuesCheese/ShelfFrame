@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from enum import Enum
 
-from sqlalchemy import Column, DateTime, Enum as SqlEnum, ForeignKey, Integer, String, Table, Text, UniqueConstraint
+from sqlalchemy import Column, DateTime, Enum as SqlEnum, Float, ForeignKey, Integer, String, Table, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -40,6 +40,11 @@ class Work(Base):
 
     files: Mapped[list[MediaFile]] = relationship(back_populates="work", cascade="all, delete-orphan")
     tags: Mapped[list[Tag]] = relationship(secondary=work_tags, back_populates="works")
+    progress: Mapped[ReadingProgress | None] = relationship(
+        back_populates="work",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
 
 
 class MediaRoot(Base):
@@ -63,6 +68,23 @@ class MediaFile(Base):
     order_index: Mapped[int] = mapped_column(Integer, default=0)
 
     work: Mapped[Work] = relationship(back_populates="files")
+
+
+class ReadingProgress(Base):
+    __tablename__ = "reading_progress"
+
+    work_id: Mapped[int] = mapped_column(ForeignKey("works.id"), primary_key=True)
+    chapter_key: Mapped[str | None] = mapped_column(String(255), default=None)
+    file_index: Mapped[int] = mapped_column(Integer, default=0)
+    page: Mapped[int] = mapped_column(Integer, default=1)
+    position: Mapped[float] = mapped_column(Float, default=0.0)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    work: Mapped[Work] = relationship(back_populates="progress")
 
 
 class Tag(Base):
