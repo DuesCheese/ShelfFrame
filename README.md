@@ -918,14 +918,24 @@
 
 ### 7.2 下一阶段计划
 
-* [ ] 增加媒体目录配置与持久化
-* [ ] 增加 sidecar `metadata.json` 读写
-* [ ] 增加标签 CRUD 与筛选
+* [x] 增加媒体目录配置与持久化
+* [x] 增加 sidecar `metadata.json` 读写
+* [x] 增加标签 CRUD 与筛选
 * [ ] 增加全文 / 拼音 / 模糊搜索
 * [ ] 为阅读器增加分页模式、RTL、进度同步
 * [ ] 为播放器接入原生 `<video>`、章节标签、预览图、热度图
 * [ ] 增加缩略图生成、封面选择与最近访问记录
 * [ ] 增加任务状态、扫描日志、错误处理与测试覆盖率
+
+### 7.3 本轮新增能力
+
+* [x] 设置页支持媒体目录持久化管理
+* [x] 扫描支持读取数据库中保存的多个媒体目录
+* [x] 作品支持导入 / 导出 sidecar 元数据
+* [x] 扫描阶段可读取 sidecar 中的标题、简介、标签
+* [x] 标签接口支持列表、新建、删除
+* [x] 媒体库页面支持按类型、标签筛选
+* [x] 增加根目录 `requirements.txt`
 
 ## 8. 项目结构
 
@@ -955,10 +965,10 @@ ShelfFrame/
 ### 9.1 后端
 
 ```bash
-cd backend
 python -m venv .venv
 source .venv/bin/activate
-pip install -e .[dev]
+pip install -r requirements.txt
+cd backend
 uvicorn app.main:app --reload
 ```
 

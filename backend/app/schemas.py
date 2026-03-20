@@ -17,11 +17,27 @@ class FileRead(BaseModel):
     order_index: int
 
 
+class TagCreate(BaseModel):
+    name: str
+    color: str | None = None
+    group_name: str | None = None
+
+
 class TagRead(BaseModel):
     id: int
     name: str
     color: str | None = None
     group_name: str | None = None
+
+
+class MediaRootCreate(BaseModel):
+    path: Path
+
+
+class MediaRootRead(BaseModel):
+    id: int
+    path: str
+    enabled: bool
 
 
 class WorkRead(BaseModel):
@@ -46,8 +62,15 @@ class ScanResult(BaseModel):
     created: int
     updated: int
     skipped: int
+    roots: list[str] = Field(default_factory=list)
 
 
 class SettingRead(BaseModel):
     database_url: str
-    media_root: Path
+    media_roots: list[MediaRootRead] = Field(default_factory=list)
+
+
+class SidecarActionResult(BaseModel):
+    work_id: int
+    sidecar_path: str
+    action: str

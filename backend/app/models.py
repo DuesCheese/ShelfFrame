@@ -42,6 +42,14 @@ class Work(Base):
     tags: Mapped[list[Tag]] = relationship(secondary=work_tags, back_populates="works")
 
 
+class MediaRoot(Base):
+    __tablename__ = "media_roots"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    path: Mapped[str] = mapped_column(String(1024), unique=True, index=True)
+    enabled: Mapped[bool] = mapped_column(default=True)
+
+
 class MediaFile(Base):
     __tablename__ = "media_files"
     __table_args__ = (UniqueConstraint("work_id", "path", name="uq_media_files_work_path"),)
