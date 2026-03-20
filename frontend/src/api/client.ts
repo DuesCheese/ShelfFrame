@@ -1,4 +1,4 @@
-import type { MediaRoot, ScanResult, Settings, Tag, Work } from '../types'
+import type { MediaRoot, ReadingProgress, ScanResult, Settings, Tag, Work } from '../types'
 
 const jsonHeaders = {
   'Content-Type': 'application/json',
@@ -7,6 +7,9 @@ const jsonHeaders = {
 async function parseResponse<T>(response: Response, message: string): Promise<T> {
   if (!response.ok) {
     throw new Error(message)
+  }
+  if (response.status === 204) {
+    return undefined as T
   }
   return response.json() as Promise<T>
 }
@@ -23,6 +26,26 @@ export async function fetchWorks(params?: { type?: string; tag?: string }): Prom
 export async function fetchWork(id: string | number): Promise<Work> {
   const response = await fetch(`/api/works/${id}`)
   return parseResponse<Work>(response, 'Failed to load work details')
+}
+
+export async function fetchReadingProgress(id: string | number): Promise<ReadingProgress | null> {
+  const response = await fetch(`/api/progress/${id}`)
+  if (response.status === 404) {
+    throw new Error('Work not found')
+  }
+  return parseResponse<ReadingProgress | null>(response, 'Failed to load reading progress')
+}
+
+export async function saveReadingProgress(
+  id: string | number,
+  input: Pick<ReadingProgress, 'chapter_key' | 'file_index' | 'page' | 'position'>,
+): Promise<ReadingProgress> {
+  const response = await fetch(`/api/progress/${id}`, {
+    method: 'PUT',
+    headers: jsonHeaders,
+    body: JSON.stringify(input),
+  })
+  return parseResponse<ReadingProgress>(response, 'Failed to save reading progress')
 }
 
 export async function triggerScan(): Promise<ScanResult> {

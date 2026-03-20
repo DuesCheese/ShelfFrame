@@ -1,4 +1,6 @@
 export type WorkType = 'comic' | 'video'
+export type ReaderMode = 'scroll' | 'paged'
+export type ReaderDirection = 'ltr' | 'rtl'
 
 export interface MediaFile {
   id: number
@@ -7,6 +9,7 @@ export interface MediaFile {
   kind: string
   size_bytes: number | null
   order_index: number
+  content_url?: string | null
 }
 
 export interface Tag {
@@ -14,6 +17,15 @@ export interface Tag {
   name: string
   color?: string | null
   group_name?: string | null
+}
+
+export interface ReadingProgress {
+  work_id: number
+  chapter_key?: string | null
+  file_index: number
+  page: number
+  position: number
+  updated_at: string
 }
 
 export interface Work {
@@ -27,6 +39,7 @@ export interface Work {
   updated_at: string
   tags: Tag[]
   files: MediaFile[]
+  progress?: ReadingProgress | null
 }
 
 export interface ScanResult {
